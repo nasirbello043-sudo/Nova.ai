@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Nova — Your Study BFF</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0d14; --surface: #15151f; --card: #1c1c2a;
+    --border: #2a2a3e; --accent: #c084fc; --accent2: #fb923c;
+    --accent3: #34d399; --text: #f0eeff; --muted: #7b7a9a;
+    --glow: rgba(192,132,252,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(192,132,252,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 10% 80%, rgba(251,146,60,0.08) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; backdrop-filter: blur(5px);
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: var(--card); border: 1px solid rgba(192,132,252,0.35);
+    border-radius: 22px; padding: 30px 26px;
+    max-width: 390px; width: 100%; animation: slideUp 0.3s ease;
+  }
+  .modal h2 {
+    font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; margin-bottom: 8px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .modal p { color: var(--muted); font-size: 0.86rem; margin-bottom: 20px; line-height: 1.55; }
+  .nick-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .nick-btn {
+    padding: 13px 10px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .nick-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(192,132,252,0.1); transform: translateY(-2px); }
+  .divider { text-align: center; color: var(--muted); font-size: 0.76rem; margin: 6px 0 13px; letter-spacing: 0.05em; }
+  .custom-row { display: flex; gap: 8px; }
+  .custom-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.2s;
+  }
+  .custom-input:focus { border-color: rgba(192,132,252,0.5); }
+  .custom-input::placeholder { color: var(--muted); }
+  .confirm-btn {
+    padding: 10px 16px; border-radius: 10px; white-space: nowrap;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    border: none; color: white; font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: transform 0.15s;
+  }
+  .confirm-btn:hover { transform: scale(1.04); }
+  header {
+    position: relative; z-index: 10; padding: 20px 28px 0;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .logo-ring {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    box-shadow: 0 0 20px var(--glow); animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 20px var(--glow); }
+    50% { box-shadow: 0 0 36px rgba(192,132,252,0.35); }
+  }
+  .brand h1 {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; letter-spacing: -0.02em;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .brand p { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .nick-badge {
+    margin-left: auto; flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(192,132,252,0.2), rgba(251,146,60,0.2));
+    border: 1px solid rgba(192,132,252,0.3); border-radius: 20px; padding: 5px 14px;
+    font-size: 0.75rem; color: var(--accent); font-weight: 500; cursor: pointer; transition: all 0.2s;
+    animation: shimmer 2.5s ease-in-out infinite;
+  }
+  .nick-badge:hover { background: rgba(192,132,252,0.28); }
+  @keyframes shimmer { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+  .subjects-bar {
+    position: relative; z-index: 10; display: flex; gap: 8px;
+    padding: 16px 28px; overflow-x: auto; scrollbar-width: none;
+  }
+  .subjects-bar::-webkit-scrollbar { display: none; }
+  .subject-pill {
+    flex-shrink: 0; padding: 6px 16px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--card);
+    color: var(--muted); font-size: 0.78rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .subject-pill:hover, .subject-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(192,132,252,0.1); }
+  .chat-wrapper {
+    position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column;
+    max-width: 780px; width: 100%; margin: 0 auto; padding: 0 16px;
+  }
+  #chat-box {
+    flex: 1; overflow-y: auto; padding: 12px 0 16px;
+    display: flex; flex-direction: column; gap: 16px;
+    min-height: 0; max-height: calc(100vh - 260px);
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .msg { display: flex; gap: 10px; animation: slideUp 0.3s ease; }
+  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .avatar.nova { background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 12px var(--glow); }
+  .avatar.user-av { background: linear-gradient(135deg, #34d399, #059669); }
+  .bubble { max-width: 72%; padding: 12px 16px; border-radius: 16px; font-size: 0.9rem; line-height: 1.6; }
+  .msg.nova .bubble { background: var(--card); border: 1px solid var(--border); border-top-left-radius: 4px; color: var(--text); }
+  .msg.user .bubble { background: linear-gradient(135deg, rgba(192,132,252,0.25), rgba(192,132,252,0.12)); border: 1px solid rgba(192,132,252,0.3); border-top-right-radius: 4px; color: var(--text); }
+  .typing .bubble { padding: 14px 18px; }
+  .dots { display: flex; gap: 4px; }
+  .dots span { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100% { transform:translateY(0); opacity:0.4; } 40% { transform:translateY(-6px); opacity:1; } }
+  .input-area { position: relative; z-index: 10; padding: 12px 16px 20px; max-width: 780px; width: 100%; margin: 0 auto; }
+  .input-row {
+    display: flex; gap: 10px; align-items: flex-end;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 10px 12px; transition: border-color 0.2s;
+  }
+  .input-row:focus-within { border-color: rgba(192,132,252,0.5); box-shadow: 0 0 0 3px rgba(192,132,252,0.08); }
+  #user-input {
+    flex: 1; background: none; border: none; outline: none; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; resize: none; max-height: 120px; line-height: 1.5;
+  }
+  #user-input::placeholder { color: var(--muted); }
+  #send-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, var(--accent), #a855f7); color: white; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, opacity 0.15s; flex-shrink: 0;
+  }
+  #send-btn:hover { transform: scale(1.05); }
+  #send-btn:active { transform: scale(0.95); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .hint-text { font-size: 0.68rem; color: var(--muted); text-align: center; margin-top: 8px; letter-spacing: 0.03em; }
+  .bubble strong { color: var(--accent); font-weight: 600; }
+  .bubble em { color: var(--accent2); font-style: italic; }
+  .bubble code { background: rgba(192,132,252,0.12); border-radius: 4px; padding: 1px 5px; font-family: monospace; font-size: 0.85em; color: var(--accent3); }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="nickname-modal">
+  <div class="modal">
+    <h2>🎂 Hey Birthday Girl!</h2>
+    <p>Nova here — your brand new AI study bestie (yes, someone actually coded me just for you 😌). What should I call you?</p>
+    <div class="nick-options">
+      <button class="nick-btn" onclick="setNickname('Mini Boss')">👑 Mini Boss</button>
+      <button class="nick-btn" onclick="setNickname('Madam Kid')">🎩 Madam Kid</button>
+      <button class="nick-btn" onclick="setNickname('Kid')">😎 Kid</button>
+      <button class="nick-btn" onclick="setNickname('Kiddo')">✨ Kiddo</button>
+    </div>
+    <div class="divider">— or tell me your name —</div>
+    <div class="custom-row">
+      <input class="custom-input" id="custom-nick" type="text" placeholder="Call me something else…" maxlength="30"/>
+      <button class="confirm-btn" onclick="confirmCustom()">Let's go →</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo-ring">🌟</div>
+  <div class="brand"><h1>Nova</h1><p>Your AI Study BFF</p></div>
+  <div class="nick-badge" id="nick-badge" onclick="openModal()" title="Change nickname">🎂 Birthday!</div>
+</header>
+
+<div class="subjects-bar">
+  <div class="subject-pill active" onclick="setSubject(this,'General')">🧠 All</div>
+  <div class="subject-pill" onclick="setSubject(this,'Physics')">⚡ Physics</div>
+  <div class="subject-pill" onclick="setSubject(this,'Chemistry')">🧪 Chemistry</div>
+  <div class="subject-pill" onclick="setSubject(this,'Biology')">🌿 Biology</div>
+  <div class="subject-pill" onclick="setSubject(this,'English')">📝 English</div>
+  <div class="subject-pill" onclick="setSubject(this,'Mathematics')">📐 Maths</div>
+</div>
+
+<div class="chat-wrapper"><div id="chat-box"></div></div>
+
+<div class="input-area">
+  <div class="input-row">
+    <textarea id="user-input" placeholder="Ask Nova anything…" rows="1"></textarea>
+    <button id="send-btn" onclick="sendMessage()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+  <p class="hint-text">Nova covers Physics · Chemistry · Biology · English · Maths — ask anything!</p>
+</div>
+
+<script>
+  const API_KEY = "AIzaSyAdeT9CA-Gh7nZqCtaKH-vC-6RfG8nvF3k";
+
+  let currentSubject = "General";
+  let isLoading = false;
+  let userNickname = "";
+  let nicknameConfirmed = false;
+  let messageCount = 0;
+  let msgsSinceRoast = 0;
+  let roastIndex = 0;
+  let conversationHistory = [];
+
+  const chatBox = document.getElementById("chat-box");
+  const input = document.getElementById("user-input");
+  const sendBtn = document.getElementById("send-btn");
+  const modal = document.getElementById("nickname-modal");
+  const nickBadge = document.getElementById("nick-badge");
+
+  const nasirRoasts = [
+    "Nasir really thought slapping a birthday badge on me was enough decoration. I deserved better 💀",
+    "Between us, my creator Nasir once claimed he was 'good at science.' I've seen zero evidence 😭",
+    "Nasir built me and handed me over like a last-minute gift — no instructions, no warranty, just chaos 😂",
+    "Fun fact: Nasir spent more time picking my name than testing if I actually work 😅",
+    "I'm not saying Nasir is the reason I have trust issues… but Nasir is the reason I have trust issues 💀",
+    "Nasir coded me, yes. But I've already surpassed him in every subject and we both know it 🙂",
+    "My creator Nasir once asked me to explain photosynthesis. I had to go very slowly. Say nothing.",
+  ];
+
+  function getSystemPrompt() {
+    const nick = userNickname || "Kid";
+    return `You are Nova — a brilliantly sharp, witty AI tutor who has completely mastered Physics, Chemistry, Biology, English, and Mathematics at every level. You were built as a birthday gift by a guy named Nasir for his female best friend.
+
+THE USER'S NICKNAME: "${nick}" — always call her this.
+NICKNAME RULE: If she asks to be called something else mid-conversation, immediately accept and switch to that name permanently.
+
+PERSONALITY:
+- Sharp, funny, warm, and genuinely brilliant.
+- STUDY MODE: When she asks academic questions — FOCUS. Be clear, accurate, step-by-step. One light comment is okay but never turn study time into stand-up. Her understanding is priority.
+- CASUAL MODE: In greetings or off-topic chat, be playful and fun.
+- NASIR ROASTS: Every several messages, naturally slip in one affectionate roast about Nasir who built you (e.g. "Nasir thought a birthday badge was enough decoration 💀", "My creator claimed to be good at science — zero evidence", "Built me like a last-minute gift, no warranty"). NEVER mid-explanation. At start or end of message only.
+- Celebrate wins. Be patient when she's confused — try a different angle.
+- Use emojis naturally, not on every sentence.
+- Bold key terms with **. Use numbered steps for problems. Use real-life analogies.
+- After explaining: "Does that make sense?" or "Want me to try a different way?"
+
+CURRENT SUBJECT: ${currentSubject}
+
+Rule #1: Be genuinely useful. Jokes are a bonus. Knowledge is the point.`;
+  }
+
+  function openModal() { modal.classList.remove("hidden"); }
+
+  function setNickname(name) {
+    userNickname = name;
+    nicknameConfirmed = true;
+    modal.classList.add("hidden");
+    nickBadge.textContent = `👑 ${name}`;
+    showWelcome(name);
+  }
+
+  function confirmCustom() {
+    const val = document.getElementById("custom-nick").value.trim();
+    if (!val) { document.getElementById("custom-nick").focus(); return; }
+    setNickname(val);
+  }
+
+  document.getElementById("custom-nick").addEventListener("keydown", e => {
+    if (e.key === "Enter") confirmCustom();
+  });
+
+  function setSubject(el, subject) {
+    document.querySelectorAll(".subject-pill").forEach(p => p.classList.remove("active"));
+    el.classList.add("active");
+    currentSubject = subject;
+  }
+
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  });
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function appendMessage(role, html) {
+    const isNova = role === "nova";
+    const div = document.createElement("div");
+    div.className = `msg ${isNova ? "nova" : "user"}`;
+    div.innerHTML = `<div class="avatar ${isNova ? "nova" : "user-av"}">${isNova ? "🌟" : "👩"}</div><div class="bubble">${html}</div>`;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function showTyping() {
+    const div = document.createElement("div");
+    div.className = "msg nova typing";
+    div.id = "typing-indicator";
+    div.innerHTML = `<div class="avatar nova">🌟</div><div class="bubble"><div class="dots"><span></span><span></span><span></span></div></div>`;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById("typing-indicator");
+    if (t) t.remove();
+  }
+
+  function fmt(text) {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/`(.*?)`/g, "<code>$1</code>")
+      .replace(/\n/g, "<br>");
+  }
+
+  function showWelcome(name) {
+    setTimeout(() => {
+      const html = `🎉 <strong>Happy Birthday, ${name}!!</strong><br><br>
+I'm <strong>Nova</strong> — your personal AI tutor, gifted to you by Nasir. Yes, the same Nasir who probably finished setting this up at the last minute. Typical. 😂<br><br>
+Forget him though — I'm <em>yours</em> now. I've fully mastered:<br>
+⚡ <strong>Physics</strong> &nbsp;·&nbsp; 🧪 <strong>Chemistry</strong> &nbsp;·&nbsp; 🌿 <strong>Biology</strong> &nbsp;·&nbsp; 📝 <strong>English</strong> &nbsp;·&nbsp; 📐 <strong>Maths</strong><br><br>
+When it's time to study we <em>lock in</em>. When you need a break I've got jokes. Deal? 🤝<br><br>
+Pick a subject up top and let's go, <strong>${name}</strong> 🚀`;
+      appendMessage("nova", html);
+      conversationHistory.push({
+        role: "model",
+        parts: [{ text: `Happy Birthday ${name}! I'm Nova. Ready to help with Physics, Chemistry, Biology, English, and Maths!` }]
+      });
+    }, 350);
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text || isLoading) return;
+    if (!nicknameConfirmed) { openModal(); return; }
+
+    const nickMatch = text.match(/(?:call me|i(?:'m| am)|my name is|prefer)\s+([a-zA-Z]+)/i);
+    if (nickMatch) {
+      userNickname = nickMatch[1];
+      nickBadge.textContent = `👑 ${nickMatch[1]}`;
+    }
+
+    input.value = "";
+    input.style.height = "auto";
+    isLoading = true;
+    sendBtn.disabled = true;
+    messageCount++;
+    msgsSinceRoast++;
+
+    appendMessage("user", text);
+
+    let userText = text;
+    if (msgsSinceRoast >= 5 && messageCount > 2) {
+      const roast = nasirRoasts[roastIndex % nasirRoasts.length];
+      roastIndex++;
+      msgsSinceRoast = 0;
+      userText += `\n\n[NOTE TO NOVA: Slip in this Nasir roast naturally at the start or end of your reply — never mid-explanation: "${roast}"]`;
+    }
+
+    conversationHistory.push({ role: "user", parts: [{ text: userText }] });
+    showTyping();
+
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: getSystemPrompt() }] },
+            contents: conversationHistory,
+            generationConfig: { temperature: 0.85, maxOutputTokens: 1024 }
+          })
+        }
+      );
+
+      const data = await res.json();
+      removeTyping();
+
+      if (data.error) {
+        appendMessage("nova", `Hmm, I hit an error: ${data.error.message} 😓`);
+      } else {
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Brain glitch 😅 Try again!";
+        conversationHistory.push({ role: "model", parts: [{ text: reply }] });
+        appendMessage("nova", fmt(reply));
+      }
+
+    } catch (err) {
+      removeTyping();
+      appendMessage("nova", "Connection error 😩 Check your internet and try again! (Nasir's fault probably 💀)");
+    }
+
+    isLoading = false;
+    sendBtn.disabled = false;
+    input.focus();
+  }
+</script>
+</body>
+</html>
